@@ -22,6 +22,7 @@ KEEP = [
     "build-for-macOS",
     "build-rustdesk-android",
     "build-rustdesk-linux",
+    "build-rustdesk-ios",
 ]
 # matrix filters: job -> predicate over a matrix.job entry
 MATRIX_KEEP = {
@@ -88,6 +89,17 @@ def rewrite_steps(job):
             new_steps.append(to_artifact_step(step, upload_action))
         else:
             new_steps.append(step)
+    if job.get("name") == "build rustdesk ios ipa":
+        # `flutter build ipa --no-codesign` yields an .xcarchive, not an .ipa
+        up = CommentedMap()
+        up["name"] = "Upload unsigned iOS archive"
+        up["uses"] = upload_action
+        w = CommentedMap()
+        w["name"] = "alphalink-ios-xcarchive"
+        w["path"] = "flutter/build/ios/archive/Runner.xcarchive"
+        w["if-no-files-found"] = "warn"
+        up["with"] = w
+        new_steps.append(up)
     job["steps"] = new_steps
 
 

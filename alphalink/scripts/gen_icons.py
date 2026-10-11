@@ -74,6 +74,15 @@ def main(root):
         fg.alpha_composite(tint(ACCENT, 600), (212, 212))  # inside the adaptive safe zone
         save(fg, base / "ic_launcher_foreground.png", int(108 * k))
         save(tint((255, 255, 255, 255), 512), base / "ic_stat_logo.png", int(24 * k))
+    # iOS: full-bleed square icons (iOS applies the corner mask itself), no alpha channel
+    ios_set = root / "flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset"
+    ios_full = tile(1024, rounded=False, logo=0.6).convert("RGB")
+    for f in sorted(ios_set.glob("Icon-App-*.png")):
+        # Icon-App-83.5x83.5@2x.png -> 83.5 * 2 pixels
+        base, scale = f.stem[len("Icon-App-"):].split("@")
+        pts = float(base.split("x")[0])
+        px = round(pts * int(scale[:-1]))
+        ios_full.resize((px, px), Image.LANCZOS).save(f)
     bg_xml = root / "flutter/android/app/src/main/res/values/ic_launcher_background.xml"
     bg_xml.write_text(
         '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'

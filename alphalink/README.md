@@ -50,6 +50,29 @@ git clone --depth 1 --branch 1.5.0 https://github.com/rustdesk/rustdesk /tmp/up
 python3 alphalink/scripts/make_workflow.py /tmp/up .github/workflows
 ```
 
+## iOS (Xcode)
+
+Готовый Xcode-проект в репозитории не хранится: он собирается из upstream плюс патчи (так он не
+расходится с остальными платформами). На Mac с Xcode, Homebrew, rustup и Flutter 3.24.5:
+
+```bash
+alphalink/scripts/build_ios.sh            # подготовка проекта
+alphalink/scripts/build_ios.sh --archive  # то же + flutter build ipa --no-codesign
+open alphalink-ios-src/flutter/ios/Runner.xcworkspace
+```
+
+Скрипт скачивает RustDesk, накладывает патчи, собирает нативные зависимости (vcpkg `arm64-ios`),
+генерирует bridge, собирает `liblibrustdesk.a` для `aarch64-apple-ios`, делает `pod install`. Первый
+запуск долгий (ffmpeg собирается из исходников). Дальше в Xcode: Runner → *Signing & Capabilities* →
+выбрать свою Team (bundle id `com.msheptun.alphalink`), затем Run или Archive.
+
+Что подготовлено для iOS: название AlphaLink, bundle id, набор иконок `AppIcon`, чужой Team ID
+RustDesk убран, entitlement push-уведомлений убран (мешает подписи бесплатным Apple ID).
+«Access WiFi Information» требует платного аккаунта разработчика: с бесплатным уберите его из
+`Runner.entitlements`. Те же шаги выполняет CI (задача *build rustdesk ios ipa*, артефакт
+`alphalink-ios-xcarchive`), так что можно взять готовый неподписанный `.xcarchive` и только
+подписать его в Xcode. **iOS-часть не проверялась на Mac.**
+
 ## Настройка клиента для своего сервера
 
 В настройках клиента, «Сеть»: *ID-сервер* `rd.example.com`, *Ретранслятор* `rd.example.com`,

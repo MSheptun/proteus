@@ -78,6 +78,30 @@ edit(kt + "MainService.kt", sub('DEFAULT_NOTIFY_TITLE = "RustDesk"', f'DEFAULT_N
 edit(kt + "MainService.kt", sub('"RustDesk Service Channel"', f'"{NAME} Service Channel"'))
 edit(kt + "MainService.kt", sub('"RustDesk Service"', f'"{NAME} Service"'))
 
+# --- iOS (Xcode project)
+edit("flutter/ios/Runner/Info.plist", sub(r"(<key>CFBundle(?:DisplayName|Name)</key>\s*<string>)RustDesk(</string>)", rf"\g<1>{NAME}\2", regex=True), 2)
+edit("flutter/ios/Runner.xcodeproj/project.pbxproj", sub("PRODUCT_BUNDLE_IDENTIFIER = com.carriez.flutterHbb;", "PRODUCT_BUNDLE_IDENTIFIER = com.msheptun.alphalink;"), 3)
+# upstream's Apple team id cannot sign for anybody else: pick your own team in Xcode
+edit("flutter/ios/Runner.xcodeproj/project.pbxproj", sub("DEVELOPMENT_TEAM = HZF9JMC8YN;", 'DEVELOPMENT_TEAM = "";'), 3)
+# push notifications are not used; the entitlement would block signing with a free Apple ID
+edit("flutter/ios/Runner/Runner.entitlements", sub(r"\s*<key>aps-environment</key>\s*<string>development</string>", "", regex=True))
+(root / "flutter/ios/exportOptions.plist").write_text(
+    '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>development</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>REPLACE_WITH_YOUR_TEAM_ID</string>
+</dict>
+</plist>
+''',
+    encoding="utf-8",
+)
+
 # --- hard-coded English display strings in Rust
 edit("src/server/wayland.rs", sub("RustDesk", NAME))
 for f in ("macos", "linux", "windows"):
