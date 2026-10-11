@@ -29,7 +29,7 @@ index 6c50625..a4954dd 100644
          (format!("{}{}", endpoint_host, domain_path), true)
      };
      let protocol = if is_domain {
-+        // Domains are assumed to sit behind a TLS terminator on 443 (see rustdesk-plus/server).
++        // Domains are assumed to sit behind a TLS terminator on 443 (see alphalink/server).
 +        // Plain `ws` is used only when the user explicitly configured an http:// api server.
          let api_server = Config::get_option("api-server");
 -        if api_server.starts_with("https") {
