@@ -18,6 +18,7 @@
 | LAN-обнаружение как в AnyDesk | `src/lan.rs`, `src/client.rs`, `src/rendezvous_mediator.rs`, `flutter/lib/common/widgets/peers_view.dart`, `MainActivity.kt` | Слушатель запускается и в портативной (не установленной) версии; рассылка идёт и на 255.255.255.255, и на направленные broadcast-адреса каждого интерфейса; список «Discovered» обновляется каждые 8 с; на Android держится `MulticastLock`; прямой доступ (`direct-server`) включён по умолчанию; к найденному в сети ПК клиент сначала подключается **напрямую по IP** (без интернета и сервера), при неудаче идёт обычным путём. Отключается опцией `enable-lan-direct=N`. |
 | Транспорт против DPI | `libs/hbb_common` (`config.rs`, `websocket.rs`), `server/` | По умолчанию включён `allow-websocket`, а для доменов используется `wss://домен/ws/id` и `wss://домен/ws/relay`: снаружи это обычный HTTPS на 443. Сервер-часть (Caddy + hbbs/hbbr) в `server/`. |
 | Название AlphaLink | `scripts/rebrand.py` | Меняет `APP_NAME` на `AlphaLink`: RustDesk переходит в штатный режим «custom client», где все переводы подменяются автоматически, окна/службы/пути остаются согласованными, а **отключается автообновление с сайта RustDesk** (иначе оно заменило бы AlphaLink оригиналом). Дополнительно переименованы ресурсы Windows (`ProductName`, описание), macOS (`CFBundleDisplayName`), Linux (`.desktop`, заголовок окна), Android (название, сервис, уведомления), жёстко заданные английские тексты. |
+| Стеклянный интерфейс (Liquid Glass) | `patches/rustdesk/0002-glass-ui.patch`, `flutter/lib/common/glass.dart` | Размытые полупрозрачные панели, светлые грани и блик, плавающая нижняя панель-капсула, стеклянные диалоги и карточки, цветной градиентный фон. Включён по умолчанию; переключатель «Стеклянный интерфейс» в Настройки (мобильные) и Настройки → Тема (десктоп). Опция `glass-ui`. |
 | Тема и иконки | `flutter/lib/common.dart`, `scripts/gen_icons.py`, `branding/logo_mask.png` | Палитра вашей Android-сборки: фон `#121212`, поверхности `#111A17`, акцент `#5CB888`, ошибки `#CC5860`. Иконки Windows/Linux/macOS/Android генерируются из логотипа. |
 | Android | `flutter/android/app/build.gradle`, `strings.xml` | `applicationId = com.msheptun.alphalink`, имя «AlphaLink». |
 
@@ -31,6 +32,13 @@ WebSocket-транспорт, этот форк включает его по у�
 
 Важно: сквозное шифрование RustDesk сохраняется внутри WebSocket, TLS добавляет внешний слой.
 LAN-подключение напрямую по IP идёт по обычному TCP-протоколу RustDesk без WebSocket.
+
+## Как выглядит стеклянный стиль
+
+Это отрисовка настоящих виджетов (`Glass`, `GlassDialog`, `glassBottomBar`) тестом Flutter, не скриншоты приложения
+на устройстве. В тесте иконки показываются квадратами (шрифт иконок не подключён), а тени без размытия.
+
+![главный экран, тёмная тема](docs/glass-home-dark.png) ![светлая тема](docs/glass-home-light.png) ![диалог](docs/glass-dialog-dark.png)
 
 ## Сборка
 
