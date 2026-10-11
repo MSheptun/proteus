@@ -1,4 +1,4 @@
-name: Build RustDesk+ (Android / Windows / macOS / Linux)
+name: Build AlphaLink (Android / Windows / macOS / Linux)
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         default: true
       upload-tag:
         type: string
-        default: rustdesk-plus
+        default: alphalink
 env:
   SCITER_RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   RUST_VERSION: "1.75" # sciter failed on m1 with 1.78 because of https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
@@ -47,10 +47,10 @@ env:
 
 jobs:
   generate-bridge:
-    uses: ./.github/workflows/rustdesk-plus-bridge.yml
+    uses: ./.github/workflows/alphalink-bridge.yml
 
   build-RustDeskTempTopMostWindow:
-    uses: ./.github/workflows/rustdesk-plus-topmost.yml
+    uses: ./.github/workflows/alphalink-topmost.yml
     strategy:
       fail-fast: false
       matrix:
@@ -85,13 +85,13 @@ jobs:
           core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-    - name: Checkout RustDesk+ overlay
+    - name: Checkout AlphaLink overlay
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       with:
         path: plus
-    - name: Prepare patched RustDesk source
+    - name: Prepare patched AlphaLink source
       shell: bash
-      run: bash plus/rustdesk-plus/scripts/prepare.sh "$GITHUB_WORKSPACE"
+      run: bash plus/alphalink/scripts/prepare.sh "$GITHUB_WORKSPACE"
     - name: Restore bridge files
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c   # v8.0.1
       with:
@@ -399,7 +399,7 @@ jobs:
       if: env.UPLOAD_ARTIFACT == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: plus-${{ github.job }}-${{ strategy.job-index }}-1
+        name: alphalink-${{ github.job }}-${{ strategy.job-index }}-1
         path: |
           ./SignOutput/rustdesk-*.msi
           ./SignOutput/rustdesk-*.exe
@@ -423,13 +423,13 @@ jobs:
           core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-    - name: Checkout RustDesk+ overlay
+    - name: Checkout AlphaLink overlay
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       with:
         path: plus
-    - name: Prepare patched RustDesk source
+    - name: Prepare patched AlphaLink source
       shell: bash
-      run: bash plus/rustdesk-plus/scripts/prepare.sh "$GITHUB_WORKSPACE"
+      run: bash plus/alphalink/scripts/prepare.sh "$GITHUB_WORKSPACE"
     - name: Import the codesign cert
       if: env.MACOS_P12_BASE64 != null
       uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071   # v1
@@ -618,7 +618,7 @@ jobs:
       if: env.UPLOAD_ARTIFACT == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: plus-${{ github.job }}-${{ strategy.job-index }}-2
+        name: alphalink-${{ github.job }}-${{ strategy.job-index }}-2
         path: |
           rustdesk*-${{ matrix.job.arch }}.dmg
         if-no-files-found: warn
@@ -685,13 +685,13 @@ jobs:
              tree \
              wget
 
-    - name: Checkout RustDesk+ overlay
+    - name: Checkout AlphaLink overlay
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       with:
         path: plus
-    - name: Prepare patched RustDesk source
+    - name: Prepare patched AlphaLink source
       shell: bash
-      run: bash plus/rustdesk-plus/scripts/prepare.sh "$GITHUB_WORKSPACE"
+      run: bash plus/alphalink/scripts/prepare.sh "$GITHUB_WORKSPACE"
     - name: Install flutter
       uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2   # v2
       with:
@@ -884,7 +884,7 @@ jobs:
       if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: plus-${{ github.job }}-${{ strategy.job-index }}-3
+        name: alphalink-${{ github.job }}-${{ strategy.job-index }}-3
         path: |
           ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
         if-no-files-found: warn
@@ -892,7 +892,7 @@ jobs:
       if: env.ANDROID_SIGNING_KEY == null && env.UPLOAD_ARTIFACT == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: plus-${{ github.job }}-${{ strategy.job-index }}-4
+        name: alphalink-${{ github.job }}-${{ strategy.job-index }}-4
         path: |
           signed-apk/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
         if-no-files-found: warn
@@ -926,13 +926,13 @@ jobs:
           sudo apt-get install -y qemu-user-static
         fi
 
-    - name: Checkout RustDesk+ overlay
+    - name: Checkout AlphaLink overlay
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       with:
         path: plus
-    - name: Prepare patched RustDesk source
+    - name: Prepare patched AlphaLink source
       shell: bash
-      run: bash plus/rustdesk-plus/scripts/prepare.sh "$GITHUB_WORKSPACE"
+      run: bash plus/alphalink/scripts/prepare.sh "$GITHUB_WORKSPACE"
     - name: Set Swap Space
       uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c   # v1.0
       with:
@@ -1187,7 +1187,7 @@ jobs:
       if: env.UPLOAD_ARTIFACT == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: plus-${{ github.job }}-${{ strategy.job-index }}-5
+        name: alphalink-${{ github.job }}-${{ strategy.job-index }}-5
         path: |
           rustdesk-*.deb
           rustdesk-*.rpm
@@ -1222,7 +1222,7 @@ jobs:
       if: matrix.job.arch == 'x86_64' && env.UPLOAD_ARTIFACT == 'true'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: plus-${{ github.job }}-${{ strategy.job-index }}-6
+        name: alphalink-${{ github.job }}-${{ strategy.job-index }}-6
         path: |
           res/rustdesk-${{ env.VERSION }}*.zst
         if-no-files-found: warn

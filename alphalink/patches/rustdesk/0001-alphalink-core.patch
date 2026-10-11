@@ -7,7 +7,7 @@ index 07f029c..30ece8e 100644
      defaultConfig {
          // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
 -        applicationId "com.carriez.flutter_hbb"
-+        applicationId "com.msheptun.rdplus"
++        applicationId "com.msheptun.alphalink"
          minSdkVersion 22
          targetSdkVersion 36
          versionCode flutterVersionCode.toInteger()
@@ -89,7 +89,7 @@ index eae55d5..d4cc17c 100644
 @@ -1,5 +1,5 @@
  <resources>
 -    <string name="app_name">RustDesk</string>
-+    <string name="app_name">RustDesk+</string>
++    <string name="app_name">AlphaLink</string>
      <string name="accessibility_service_description">Allow other devices to control your phone using virtual touch, when RustDesk screen sharing is established</string>
      <string name="foreground_service_special_use_subtype">Keeps the RustDesk remote desktop host available for authorized unattended connections and foreground notifications without starting screen capture before user approval.</string>
  </resources>

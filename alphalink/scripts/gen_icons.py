@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Generate the RustDesk+ icon set from branding/logo_mask.png.
+"""Generate the AlphaLink icon set from branding/logo_mask.png.
 
 Usage: gen_icons.py <rustdesk-source-root>
 
 Writes desktop (Windows/Linux/macOS), tray and Android launcher icons into an
-upstream RustDesk checkout, using the RustDesk+ palette: dark green surface and
+upstream RustDesk checkout, using the AlphaLink palette: dark green surface and
 green accent logo.
 """
 import sys

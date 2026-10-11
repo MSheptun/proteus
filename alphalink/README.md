@@ -1,13 +1,13 @@
-# RustDesk+ (патчи поверх RustDesk 1.5.0)
+# AlphaLink (патчи поверх RustDesk 1.5.0)
 
-Набор патчей, скриптов и CI для сборки RustDesk+ под **Android, Windows, macOS и Linux**.
+Набор патчей, скриптов и CI для сборки AlphaLink под **Android, Windows, macOS и Linux**.
 Исходники RustDesk здесь не хранятся: `scripts/prepare.sh` скачивает upstream-тег из
-[`UPSTREAM`](UPSTREAM), накладывает патчи и генерирует иконки. Так обновление на новую
+[`UPSTREAM`](UPSTREAM), накладывает патчи, переименовывает продукт в AlphaLink и генерирует иконки. Так обновление на новую
 версию RustDesk сводится к смене тега и (при необходимости) правке патчей.
 
 > **Статус.** Патчи применяются к чистому `rustdesk/rustdesk@1.5.0` (проверено `git apply --check`).
 > Полная сборка и запуск на устройствах из этого окружения не выполнялись: проверка идёт через
-> GitHub Actions (`Build RustDesk+`). Пока нет зелёной сборки и проверки на реальных
+> GitHub Actions (`Build AlphaLink`). Пока нет зелёной сборки и проверки на реальных
 > устройствах, считайте всё непротестированным.
 
 ## Что внутри
@@ -17,8 +17,9 @@
 | Ошибка «WebRTC failed … Failed to connect to rendezvous server» после сворачивания | `src/client.rs`, `flutter/lib/models/model.dart` | После возврата из фона сеть на Android ещё не готова, а `request_relay` падал на первом же TCP-подключении. Теперь: 3 попытки с паузой в Rust, а во Flutter такие транспортные ошибки (`rendezvous` / `relay` / `WebRTC failed` / `No direct transport`) идут в автопереподключение с нарастающей паузой до 2 минут вместо окна с единственной кнопкой OK. |
 | LAN-обнаружение как в AnyDesk | `src/lan.rs`, `src/client.rs`, `src/rendezvous_mediator.rs`, `flutter/lib/common/widgets/peers_view.dart`, `MainActivity.kt` | Слушатель запускается и в портативной (не установленной) версии; рассылка идёт и на 255.255.255.255, и на направленные broadcast-адреса каждого интерфейса; список «Discovered» обновляется каждые 8 с; на Android держится `MulticastLock`; прямой доступ (`direct-server`) включён по умолчанию; к найденному в сети ПК клиент сначала подключается **напрямую по IP** (без интернета и сервера), при неудаче идёт обычным путём. Отключается опцией `enable-lan-direct=N`. |
 | Транспорт против DPI | `libs/hbb_common` (`config.rs`, `websocket.rs`), `server/` | По умолчанию включён `allow-websocket`, а для доменов используется `wss://домен/ws/id` и `wss://домен/ws/relay`: снаружи это обычный HTTPS на 443. Сервер-часть (Caddy + hbbs/hbbr) в `server/`. |
-| Тема и иконки | `flutter/lib/common.dart`, `scripts/gen_icons.py`, `branding/logo_mask.png` | Палитра из Android-приложения: фон `#121212`, поверхности `#111A17`, акцент `#5CB888`, ошибки `#CC5860`. Иконки Windows/Linux/macOS/Android генерируются из логотипа. |
-| Android | `flutter/android/app/build.gradle`, `strings.xml` | `applicationId = com.msheptun.rdplus`, имя «RustDesk+». |
+| Название AlphaLink | `scripts/rebrand.py` | Меняет `APP_NAME` на `AlphaLink`: RustDesk переходит в штатный режим «custom client», где все переводы подменяются автоматически, окна/службы/пути остаются согласованными, а **отключается автообновление с сайта RustDesk** (иначе оно заменило бы AlphaLink оригиналом). Дополнительно переименованы ресурсы Windows (`ProductName`, описание), macOS (`CFBundleDisplayName`), Linux (`.desktop`, заголовок окна), Android (название, сервис, уведомления), жёстко заданные английские тексты. |
+| Тема и иконки | `flutter/lib/common.dart`, `scripts/gen_icons.py`, `branding/logo_mask.png` | Палитра вашей Android-сборки: фон `#121212`, поверхности `#111A17`, акцент `#5CB888`, ошибки `#CC5860`. Иконки Windows/Linux/macOS/Android генерируются из логотипа. |
+| Android | `flutter/android/app/build.gradle`, `strings.xml` | `applicationId = com.msheptun.alphalink`, имя «AlphaLink». |
 
 ### Про «свой протокол»
 
@@ -33,20 +34,20 @@ LAN-подключение напрямую по IP идёт по обычном
 
 ## Сборка
 
-В GitHub Actions: вкладка **Actions → Build RustDesk+ → Run workflow**. Артефакты
-(`plus-…`) появляются в результатах запуска; в Releases ничего не публикуется.
+В GitHub Actions: вкладка **Actions → Build AlphaLink → Run workflow**. Артефакты
+(`alphalink-…`) появляются в результатах запуска; в Releases ничего не публикуется.
 
 Локально (получить патченые исходники, дальше по инструкции RustDesk):
 
 ```bash
-rustdesk-plus/scripts/prepare.sh /путь/к/каталогу
+alphalink/scripts/prepare.sh /путь/к/каталогу
 ```
 
-Файлы `.github/workflows/rustdesk-plus*.yml` **сгенерированы** из upstream-workflow:
+Файлы `.github/workflows/alphalink*.yml` **сгенерированы** из upstream-workflow:
 
 ```bash
 git clone --depth 1 --branch 1.5.0 https://github.com/rustdesk/rustdesk /tmp/up
-python3 rustdesk-plus/scripts/make_workflow.py /tmp/up .github/workflows
+python3 alphalink/scripts/make_workflow.py /tmp/up .github/workflows
 ```
 
 ## Настройка клиента для своего сервера
@@ -54,14 +55,26 @@ python3 rustdesk-plus/scripts/make_workflow.py /tmp/up .github/workflows
 В настройках клиента, «Сеть»: *ID-сервер* `rd.example.com`, *Ретранслятор* `rd.example.com`,
 *Key* из `server/data/id_ed25519.pub`. Порты указывать не нужно.
 
+## Что осталось с названием RustDesk (и почему)
+
+* **Имена файлов и внутренние идентификаторы**: бинарники и библиотеки (`rustdesk`, `librustdesk.*`),
+  имена артефактов сборки `rustdesk-1.5.0-*`, каталог `.app` на macOS, идентификаторы в коде, имена
+  IPC/каналов, драйверов и устройств. Их переименование ломает скрипты сборки и установки upstream,
+  пользователь их не видит.
+* **Лицензия и авторство.** AGPL-3.0 требует сохранять уведомления об авторских правах (они остаются в
+  `LICENCE`, в ресурсах Windows `LegalCopyright`) и предоставлять исходники. В режиме custom client
+  RustDesk намеренно оставляет строку «Powered by RustDesk» как ссылку на первоисточник; я её не
+  убирал. Если нужно скрыть и её, скажите, это правка в одну строку.
+* Серверные образы `rustdesk/rustdesk-server` в `server/` называются так у upstream.
+
 ## Ограничения и что нужно знать
 
 * **Подпись Android.** CI подписывает APK debug-ключом. Установить поверх вашего текущего
-  `com.msheptun.rdplus` не получится (другая подпись): сначала удалите старое приложение или
+  старую сборку `RustDesk+` не получится (другой пакет `com.msheptun.alphalink`, другая подпись): удалите её или
   подпишите своим ключом (секреты `ANDROID_SIGNING_KEY` и др., см. upstream workflow).
 * **Исходников вашего APK у меня нет**, только скомпилированный Dart (`libapp.so`). Поэтому
   перенесены то, что можно восстановить из ресурсов и скриншота: палитра, логотип, название и
-  идентификатор пакета. Переключение 85 значков лаунчера (`IconW*`, `IconL*B*`) и любые
+  идентификатор пакета. Переключение 85 значков лаунчера (`IconW*`, `IconL*B*` в APK) и любые
   другие экраны вашей сборки **не перенесены**: нужны исходники.
 * **Безопасность LAN-прямого подключения.** Ответы обнаружения никак не аутентифицированы:
   другое устройство в той же сети может назваться чужим ID, и клиент подключится к нему по IP

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Prepare a patched RustDesk source tree.
+# Prepare a patched (AlphaLink) source tree from upstream RustDesk.
 #
 #   prepare.sh <target-dir>
 #
 # Fetches upstream RustDesk at the pinned tag (see ../UPSTREAM) into <target-dir>
-# (which may already contain other files), applies the RustDesk+ patches and
+# (which may already contain other files), applies the AlphaLink patches and
 # generates the branded icon set.
 set -euo pipefail
 
@@ -28,6 +28,7 @@ git submodule update -q --init --recursive --depth 1
 git apply --whitespace=nowarn "$PLUS"/patches/rustdesk/*.patch
 (cd libs/hbb_common && git apply --whitespace=nowarn "$PLUS"/patches/hbb_common/*.patch)
 
+python3 "$PLUS/scripts/rebrand.py" "$TARGET"
 python3 -m pip install --quiet pillow 2>/dev/null || true
 python3 "$PLUS/scripts/gen_icons.py" "$TARGET"
-echo "RustDesk+ source ready in $TARGET"
+echo "AlphaLink source ready in $TARGET"
