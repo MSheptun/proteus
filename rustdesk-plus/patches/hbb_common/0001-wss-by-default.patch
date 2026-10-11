@@ -1,0 +1,57 @@
+diff --git a/src/config.rs b/src/config.rs
+index 6fe1004..e67b807 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -2826,9 +2826,17 @@ pub fn is_disable_installation() -> bool {
+ pub fn option2bool(option: &str, value: &str) -> bool {
+     if option.starts_with("enable-") {
+         value != "N"
++    } else if option == keys::OPTION_ALLOW_WEBSOCKET {
++        // WebSocket over TLS (wss://host/ws/...) is the default transport: on the wire it is
++        // an ordinary HTTPS connection to port 443 and does not expose the RustDesk framing to
++        // DPI. Can be turned off with an explicit "N".
++        value != "N"
++    } else if option == keys::OPTION_DIRECT_SERVER {
++        // Enabled by default so that devices on the same network can connect to each other
++        // directly (LAN discovery); can be turned off with an explicit "N".
++        value != "N"
+     } else if option.starts_with("allow-")
+         || option == "stop-service"
+-        || option == keys::OPTION_DIRECT_SERVER
+         || option == "force-always-relay"
+     {
+         value == "Y"
+diff --git a/src/websocket.rs b/src/websocket.rs
+index 6c50625..a4954dd 100644
+--- a/src/websocket.rs
++++ b/src/websocket.rs
+@@ -422,11 +422,13 @@ pub fn check_ws(endpoint: &str) -> String {
+         (format!("{}{}", endpoint_host, domain_path), true)
+     };
+     let protocol = if is_domain {
++        // Domains are assumed to sit behind a TLS terminator on 443 (see rustdesk-plus/server).
++        // Plain `ws` is used only when the user explicitly configured an http:// api server.
+         let api_server = Config::get_option("api-server");
+-        if api_server.starts_with("https") {
+-            "wss"
+-        } else {
++        if api_server.starts_with("http://") {
+             "ws"
++        } else {
++            "wss"
+         }
+     } else {
+         "ws"
+@@ -480,9 +482,9 @@ mod tests {
+         assert_eq!(check_ws("127.0.0.1:21115"), "ws://127.0.0.1:21118");
+         assert_eq!(check_ws("127.0.0.1:21116"), "ws://127.0.0.1:21118");
+         assert_eq!(check_ws("127.0.0.1:21117"), "ws://127.0.0.1:21119");
+-        assert_eq!(check_ws("rustdesk.com:21115"), "ws://rustdesk.com/ws/id");
+-        assert_eq!(check_ws("rustdesk.com:21116"), "ws://rustdesk.com/ws/id");
+-        assert_eq!(check_ws("rustdesk.com:21117"), "ws://rustdesk.com/ws/relay");
++        assert_eq!(check_ws("rustdesk.com:21115"), "wss://rustdesk.com/ws/id");
++        assert_eq!(check_ws("rustdesk.com:21116"), "wss://rustdesk.com/ws/id");
++        assert_eq!(check_ws("rustdesk.com:21117"), "wss://rustdesk.com/ws/relay");
+         // set relay-server without port
+         Config::set_option("relay-server".to_string(), "127.0.0.1".to_string());
+         Config::set_option(

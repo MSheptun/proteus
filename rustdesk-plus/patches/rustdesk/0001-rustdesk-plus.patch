@@ -1,0 +1,465 @@
+diff --git a/flutter/android/app/build.gradle b/flutter/android/app/build.gradle
+index 07f029c..30ece8e 100644
+--- a/flutter/android/app/build.gradle
++++ b/flutter/android/app/build.gradle
+@@ -99,7 +99,7 @@ android {
+ 
+     defaultConfig {
+         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+-        applicationId "com.carriez.flutter_hbb"
++        applicationId "com.msheptun.rdplus"
+         minSdkVersion 22
+         targetSdkVersion 36
+         versionCode flutterVersionCode.toInteger()
+diff --git a/flutter/android/app/src/main/AndroidManifest.xml b/flutter/android/app/src/main/AndroidManifest.xml
+index e078818..3fd09fe 100644
+--- a/flutter/android/app/src/main/AndroidManifest.xml
++++ b/flutter/android/app/src/main/AndroidManifest.xml
+@@ -10,6 +10,8 @@
+     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+     <uses-permission android:name="android.permission.INTERNET" />
+     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
++    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
++    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt
+index 7225e52..60b1049 100644
+--- a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt
++++ b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt
+@@ -26,6 +26,7 @@ import android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlan
+ import android.media.MediaCodecList
+ import android.media.MediaFormat
+ import android.net.Uri
++import android.net.wifi.WifiManager
+ import android.provider.DocumentsContract
+ import android.provider.OpenableColumns
+ import android.webkit.MimeTypeMap
+@@ -98,6 +99,7 @@ class MainActivity : FlutterActivity() {
+ 
+     override fun onResume() {
+         super.onResume()
++        acquireMulticastLock()
+         val inputPer = InputService.isOpen
+         activity.runOnUiThread {
+             flutterMethodChannel?.invokeMethod(
+@@ -223,6 +225,37 @@ class MainActivity : FlutterActivity() {
+         }
+     }
+ 
++    // Android filters incoming broadcast/multicast UDP unless a multicast lock is held.
++    // LAN discovery needs it to see other devices on the same network.
++    private var multicastLock: WifiManager.MulticastLock? = null
++
++    private fun acquireMulticastLock() {
++        try {
++            if (multicastLock?.isHeld == true) return
++            val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
++            multicastLock = wifi?.createMulticastLock("rustdesk-lan-discovery")?.apply {
++                setReferenceCounted(false)
++                acquire()
++            }
++        } catch (e: Exception) {
++            Log.w(logTag, "acquire multicast lock failed: $e")
++        }
++    }
++
++    private fun releaseMulticastLock() {
++        try {
++            multicastLock?.takeIf { it.isHeld }?.release()
++        } catch (e: Exception) {
++            Log.w(logTag, "release multicast lock failed: $e")
++        }
++        multicastLock = null
++    }
++
++    override fun onPause() {
++        releaseMulticastLock()
++        super.onPause()
++    }
++
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         if (_rdClipboardManager == null) {
+diff --git a/flutter/android/app/src/main/res/values/strings.xml b/flutter/android/app/src/main/res/values/strings.xml
+index eae55d5..d4cc17c 100644
+--- a/flutter/android/app/src/main/res/values/strings.xml
++++ b/flutter/android/app/src/main/res/values/strings.xml
+@@ -1,5 +1,5 @@
+ <resources>
+-    <string name="app_name">RustDesk</string>
++    <string name="app_name">RustDesk+</string>
+     <string name="accessibility_service_description">Allow other devices to control your phone using virtual touch, when RustDesk screen sharing is established</string>
+     <string name="foreground_service_special_use_subtype">Keeps the RustDesk remote desktop host available for authorized unattended connections and foreground notifications without starting screen capture before user approval.</string>
+ </resources>
+diff --git a/flutter/lib/common.dart b/flutter/lib/common.dart
+index b80e0b5..16846bd 100644
+--- a/flutter/lib/common.dart
++++ b/flutter/lib/common.dart
+@@ -248,17 +248,22 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
+ class MyTheme {
+   MyTheme._();
+ 
++  // RustDesk+ dark palette (taken from the Android app).
++  static const Color plusBg = Color(0xFF121212);
++  static const Color plusSurface = Color(0xFF111A17);
++  static const Color plusSurfaceHigh = Color(0xFF1A2622);
++  static const Color plusError = Color(0xFFCC5860);
+   static const Color grayBg = Color(0xFFEFEFF2);
+-  static const Color accent = Color(0xFF0071FF);
+-  static const Color accent50 = Color(0x770071FF);
+-  static const Color accent80 = Color(0xAA0071FF);
++  static const Color accent = Color(0xFF5CB888);
++  static const Color accent50 = Color(0x775CB888);
++  static const Color accent80 = Color(0xAA5CB888);
+   static const Color canvasColor = Color(0xFF212121);
+   static const Color border = Color(0xFFCCCCCC);
+-  static const Color idColor = Color(0xFF00B6F0);
++  static const Color idColor = Color(0xFF5CB888);
+   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
+   static const Color cmIdColor = Color(0xFF21790B);
+   static const Color dark = Colors.black87;
+-  static const Color button = Color(0xFF2C8CFF);
++  static const Color button = Color(0xFF4FA97A);
+   static const Color hoverBorder = Color(0xFF999999);
+ 
+   // ListTile
+@@ -471,9 +476,9 @@ class MyTheme {
+   static ThemeData darkTheme = ThemeData(
+     useMaterial3: false,
+     brightness: Brightness.dark,
+-    hoverColor: Color.fromARGB(255, 45, 46, 53),
+-    scaffoldBackgroundColor: Color(0xFF18191E),
+-    dialogBackgroundColor: Color(0xFF18191E),
++    hoverColor: Color(0xFF22302B),
++    scaffoldBackgroundColor: MyTheme.plusBg,
++    dialogBackgroundColor: MyTheme.plusSurface,
+     appBarTheme: AppBarTheme(
+       shadowColor: Colors.transparent,
+     ),
+@@ -483,14 +488,14 @@ class MyTheme {
+         borderRadius: BorderRadius.circular(18.0),
+         side: BorderSide(
+           width: 1,
+-          color: Color(0xFF24252B),
++          color: Color(0xFF1A2622),
+         ),
+       ),
+     ),
+     scrollbarTheme: scrollbarThemeDark,
+     inputDecorationTheme: (isDesktop || isWebDesktop)
+         ? InputDecorationTheme(
+-            fillColor: Color(0xFF24252B),
++            fillColor: Color(0xFF1A2622),
+             filled: true,
+             isDense: true,
+             border: OutlineInputBorder(
+@@ -509,7 +514,7 @@ class MyTheme {
+         color: accent80,
+       ),
+     ),
+-    cardColor: Color(0xFF24252B),
++    cardColor: Color(0xFF1A2622),
+     visualDensity: VisualDensity.adaptivePlatformDensity,
+     tabBarTheme: const TabBarTheme(
+       labelColor: Colors.white70,
+@@ -543,7 +548,7 @@ class MyTheme {
+     ),
+     outlinedButtonTheme: OutlinedButtonThemeData(
+       style: OutlinedButton.styleFrom(
+-        backgroundColor: Color(0xFF24252B),
++        backgroundColor: Color(0xFF1A2622),
+         side: BorderSide(color: Colors.white12, width: 0.5),
+         disabledForegroundColor: Colors.white70,
+         foregroundColor: Colors.white70,
+@@ -562,7 +567,7 @@ class MyTheme {
+     colorScheme: ColorScheme.dark(
+       primary: Colors.blue,
+       secondary: accent,
+-      background: Color(0xFF24252B),
++      background: Color(0xFF1A2622),
+     ),
+     popupMenuTheme: PopupMenuThemeData(
+         shape: RoundedRectangleBorder(
+@@ -1321,7 +1326,7 @@ Color? _msgboxColor(String type) {
+   if (type.contains("error") || type == "re-input-password") {
+     return Color(0xFFE04F5F);
+   }
+-  return Color(0xFF2C8CFF);
++  return MyTheme.accent;
+ }
+ 
+ Widget msgboxIcon(String type) {
+diff --git a/flutter/lib/common/widgets/peers_view.dart b/flutter/lib/common/widgets/peers_view.dart
+index 5be5af2..2d68ce9 100644
+--- a/flutter/lib/common/widgets/peers_view.dart
++++ b/flutter/lib/common/widgets/peers_view.dart
+@@ -507,10 +507,41 @@ class DiscoveredPeersView extends BasePeersView {
+     final widget = super.build(context);
+     bind.mainLoadLanPeers();
+     bind.mainDiscover();
+-    return widget;
++    return _LanAutoRefresh(child: widget);
+   }
+ }
+ 
++/// Re-runs LAN discovery every few seconds while the "Discovered" list is visible,
++/// so that devices appear/disappear on their own like in AnyDesk.
++class _LanAutoRefresh extends StatefulWidget {
++  final Widget child;
++  const _LanAutoRefresh({Key? key, required this.child}) : super(key: key);
++
++  @override
++  State<_LanAutoRefresh> createState() => _LanAutoRefreshState();
++}
++
++class _LanAutoRefreshState extends State<_LanAutoRefresh> {
++  Timer? _timer;
++
++  @override
++  void initState() {
++    super.initState();
++    _timer = Timer.periodic(const Duration(seconds: 8), (_) {
++      bind.mainDiscover();
++    });
++  }
++
++  @override
++  void dispose() {
++    _timer?.cancel();
++    super.dispose();
++  }
++
++  @override
++  Widget build(BuildContext context) => widget.child;
++}
++
+ class AddressBookPeersView extends BasePeersView {
+   AddressBookPeersView(
+       {Key? key, EdgeInsets? menuPadding, ScrollController? scrollController})
+diff --git a/flutter/lib/models/model.dart b/flutter/lib/models/model.dart
+index f1abb8e..20f8f6c 100644
+--- a/flutter/lib/models/model.dart
++++ b/flutter/lib/models/model.dart
+@@ -120,6 +120,7 @@ class FfiModel with ChangeNotifier {
+   Timer? _timer;
+   Timer? _restartReconnectDelayTimer;
+   var _reconnects = 1;
++  DateTime? _transportRetryStartTime;
+   DateTime? _offlineReconnectStartTime;
+   bool _androidDocumentPickerActive = false;
+   bool _androidDocumentPickerInterruptedConnection = false;
+@@ -963,7 +964,8 @@ class FfiModel with ChangeNotifier {
+     } else {
+       var hasRetry = evt['hasRetry'] == 'true';
+       if (!hasRetry) {
+-        hasRetry = shouldAutoRetryOnOffline(type, title, text);
++        hasRetry = shouldAutoRetryOnOffline(type, title, text) ||
++            shouldAutoRetryOnTransportError(type, title, text);
+       }
+       showMsgBox(sessionId, type, title, text, link, hasRetry, dialogManager);
+     }
+@@ -991,6 +993,26 @@ class FfiModel with ChangeNotifier {
+     reconnect(parent.target!.dialogManager, sessionId, false);
+   }
+ 
++  /// Auto-retry for transient transport failures (rendezvous / relay / WebRTC
++  /// unreachable). Typical case: the app is brought back from the background
++  /// and the network is not ready yet. Retries for up to 2 minutes with the
++  /// usual exponential back-off instead of leaving a dead-end dialog.
++  bool shouldAutoRetryOnTransportError(String type, String title, String text) {
++    if (type != 'error' || title != 'Connection Error') return false;
++    const markers = [
++      'Failed to connect to rendezvous server',
++      'Failed to connect via relay server',
++      'Failed to connect to relay server',
++      'WebRTC failed',
++      'No direct transport available',
++      'Failed to make direct connection to remote desktop',
++    ];
++    if (!markers.any((m) => text.contains(m))) return false;
++    _transportRetryStartTime ??= DateTime.now();
++    return DateTime.now().difference(_transportRetryStartTime!).inSeconds <
++        120;
++  }
++
+   /// Auto-retry check for "Remote desktop is offline" error.
+   /// returns true to auto-retry, false otherwise.
+   bool shouldAutoRetryOnOffline(
+@@ -1093,6 +1115,7 @@ class FfiModel with ChangeNotifier {
+     } else {
+       _reconnects = 1;
+       _offlineReconnectStartTime = null;
++      _transportRetryStartTime = null;
+     }
+   }
+ 
+@@ -1446,6 +1469,7 @@ class FfiModel with ChangeNotifier {
+       }
+       if (displays.isNotEmpty) {
+         _reconnects = 1;
++        _transportRetryStartTime = null;
+         _offlineReconnectStartTime = null;
+         resetRestartReconnectState();
+         waitForFirstImage.value = true;
+diff --git a/src/client.rs b/src/client.rs
+index d3e66e7..1b96b69 100644
+--- a/src/client.rs
++++ b/src/client.rs
+@@ -439,6 +439,29 @@ impl Client {
+                 false,
+             ));
+         }
++        // The peer was found on the local network by LAN discovery: try a direct connection first
++        // (no internet, rendezvous or relay server needed). Falls through to the regular flow when
++        // the peer does not accept direct connections.
++        if !interface.is_force_relay()
++            && config::option2bool("enable-lan-direct", &Config::get_option("enable-lan-direct"))
++        {
++            if let Some(ip) = crate::lan::get_lan_ip_of_peer(peer) {
++                let addr = check_port(&ip, RELAY_PORT + 1);
++                match connect_tcp_local(addr.clone(), None, 3_000).await {
++                    Ok(stream) => {
++                        log::info!("Connected to {} directly via LAN at {}", peer, addr);
++                        return Ok((
++                            (stream, true, None, None, "TCP"),
++                            (0, "".to_owned()),
++                            false,
++                        ));
++                    }
++                    Err(err) => {
++                        log::info!("LAN direct connect to {} failed: {}", addr, err);
++                    }
++                }
++            }
++        }
+         // Allow connect to {domain}:{port}
+         if hbb_common::is_domain_port_str(peer) {
+             return Ok((
+@@ -1791,9 +1814,40 @@ impl Client {
+ 
+         for i in 1..=3 {
+             // use different socket due to current hbbs implementation requiring different nat address for each attempt
+-            let mut socket = connect_tcp(rendezvous_server, CONNECT_TIMEOUT)
+-                .await
+-                .with_context(|| "Failed to connect to rendezvous server")?;
++            // On Android the network stack may still be waking up right after the app returns
++            // from the background, so a single failed connect is not conclusive: retry with a
++            // short back-off before giving up.
++            let mut socket = {
++                let mut last_err = None;
++                let mut connected = None;
++                for retry in 0..3u64 {
++                    if retry > 0 {
++                        hbb_common::sleep(retry as f32).await;
++                    }
++                    match connect_tcp(rendezvous_server, CONNECT_TIMEOUT).await {
++                        Ok(s) => {
++                            connected = Some(s);
++                            break;
++                        }
++                        Err(e) => {
++                            log::warn!(
++                                "Connect to rendezvous server failed (try {}): {}",
++                                retry + 1,
++                                e
++                            );
++                            last_err = Some(e);
++                        }
++                    }
++                }
++                match connected {
++                    Some(s) => s,
++                    None => {
++                        return Err(last_err
++                            .unwrap()
++                            .context("Failed to connect to rendezvous server"))
++                    }
++                }
++            };
+ 
+             if !key.is_empty() && (!token.is_empty() || !switch_code.is_empty()) {
+                 secure_tcp(&mut socket, key).await?;
+diff --git a/src/lan.rs b/src/lan.rs
+index 2a648aa..5181731 100644
+--- a/src/lan.rs
++++ b/src/lan.rs
+@@ -185,6 +185,43 @@ fn create_broadcast_sockets() -> Vec<UdpSocket> {
+     sockets
+ }
+ 
++/// (local ipv4, directed broadcast address) for every usable interface address.
++#[cfg(not(any(target_os = "ios")))]
++fn directed_broadcasts() -> Vec<(Ipv4Addr, Ipv4Addr)> {
++    let mut v = Vec::new();
++    for interface in default_net::get_interfaces() {
++        for ipv4 in &interface.ipv4 {
++            if ipv4.addr.is_loopback() || ipv4.addr.is_link_local() {
++                continue;
++            }
++            let ip = u32::from(ipv4.addr);
++            let mask = u32::from(ipv4.netmask);
++            if mask == 0 || mask == u32::MAX {
++                continue;
++            }
++            v.push((ipv4.addr, Ipv4Addr::from(ip | !mask)));
++        }
++    }
++    v
++}
++
++/// Look up the LAN address of a peer previously found by LAN discovery.
++/// Used to connect directly (without any rendezvous / relay server) when the peer is on the
++/// same network.
++pub fn get_lan_ip_of_peer(id: &str) -> Option<String> {
++    config::LanPeers::load()
++        .peers
++        .iter()
++        .find(|p| p.id == id && p.online)
++        .and_then(|p| {
++            p.ip_mac
++                .keys()
++                .filter_map(|ip| ip.parse::<IpAddr>().ok())
++                .find(|ip| ip.is_ipv4())
++                .map(|ip| ip.to_string())
++        })
++}
++
+ fn send_query() -> ResultType<Vec<UdpSocket>> {
+     let sockets = create_broadcast_sockets();
+     if sockets.is_empty() {
+@@ -214,6 +251,17 @@ fn send_query() -> ResultType<Vec<UdpSocket>> {
+     for socket in &sockets {
+         allow_err!(socket.send_to(&out, maddr));
+     }
++    // Some networks / OS network stacks drop the limited broadcast (255.255.255.255), especially
++    // with several adapters, so also send to every subnet-directed broadcast address.
++    #[cfg(not(any(target_os = "ios")))]
++    for (src, dst) in directed_broadcasts() {
++        if let Some(socket) = sockets
++            .iter()
++            .find(|s| s.local_addr().map(|a| a.ip() == IpAddr::V4(src)).unwrap_or(false))
++        {
++            allow_err!(socket.send_to(&out, SocketAddr::from((dst, get_broadcast_port()))));
++        }
++    }
+     log::info!("discover ping sent");
+     Ok(sockets)
+ }
+diff --git a/src/rendezvous_mediator.rs b/src/rendezvous_mediator.rs
+index b039995..d6a7ecf 100644
+--- a/src/rendezvous_mediator.rs
++++ b/src/rendezvous_mediator.rs
+@@ -294,8 +294,10 @@ impl RendezvousMediator {
+         });
+         #[cfg(target_os = "android")]
+         let start_lan_listening = true;
++        // Also listen when running portable (not installed), so that LAN discovery works for
++        // every desktop run of the app.
+         #[cfg(not(any(target_os = "android", target_os = "ios")))]
+-        let start_lan_listening = crate::platform::is_installed();
++        let start_lan_listening = true;
+         if start_lan_listening {
+             std::thread::spawn(move || {
+                 allow_err!(super::lan::start_listening());
