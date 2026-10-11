@@ -29,6 +29,11 @@ git apply --whitespace=nowarn "$PLUS"/patches/rustdesk/*.patch
 (cd libs/hbb_common && git apply --whitespace=nowarn "$PLUS"/patches/hbb_common/*.patch)
 
 python3 "$PLUS/scripts/rebrand.py" "$TARGET"
-python3 -m pip install --quiet pillow 2>/dev/null || true
+# Pillow is needed for the icon generator. Homebrew / Debian Pythons refuse plain pip installs
+# (PEP 668), hence the fallback.
+if ! python3 -c "import PIL" 2>/dev/null; then
+  python3 -m pip install --quiet pillow 2>/dev/null \
+    || python3 -m pip install --quiet --break-system-packages pillow
+fi
 python3 "$PLUS/scripts/gen_icons.py" "$TARGET"
 echo "AlphaLink source ready in $TARGET"
