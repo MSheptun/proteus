@@ -1,0 +1,19 @@
+{$DOMAIN} {
+	encode gzip
+
+	# RustDesk signalling / relay as WebSocket over TLS. These are the paths the
+	# client uses (hbb_common/src/websocket.rs: /ws/id and /ws/relay).
+	handle /ws/id {
+		reverse_proxy hbbs:21118
+	}
+	handle /ws/relay {
+		reverse_proxy hbbr:21119
+	}
+
+	# Everything else looks like a normal small website, so that probing the
+	# domain does not reveal anything.
+	handle {
+		root * /srv/site
+		file_server
+	}
+}

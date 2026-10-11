@@ -1,0 +1,44 @@
+# RustDesk+ server: hbbs/hbbr hidden behind Caddy on 443.
+#
+# From the outside only 80/443 are open and the traffic is ordinary HTTPS
+# (WebSocket over TLS). hbbs/hbbr listen only inside the compose network.
+#
+#   1. Point DNS of $DOMAIN to this host.
+#   2. cp .env.example .env && edit it
+#   3. docker compose up -d
+#   4. cat data/id_ed25519.pub   -> "Key" in the client settings
+services:
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    command: hbbs -r ${DOMAIN}:443 -k _
+    volumes:
+      - ./data:/root
+    depends_on: [hbbr]
+    restart: unless-stopped
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    command: hbbr -k _
+    volumes:
+      - ./data:/root
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./site:/srv/site:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [hbbs, hbbr]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
