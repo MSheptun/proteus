@@ -272,7 +272,7 @@ index 4b3e35b..179f52d 100644
      }
  
 diff --git a/app/src/main/java/helium314/keyboard/latin/settings/Defaults.kt b/app/src/main/java/helium314/keyboard/latin/settings/Defaults.kt
-index b5fd76e..6122843 100644
+index b5fd76e..aeeb894 100644
 --- a/app/src/main/java/helium314/keyboard/latin/settings/Defaults.kt
 +++ b/app/src/main/java/helium314/keyboard/latin/settings/Defaults.kt
 @@ -55,7 +55,8 @@ object Defaults {
@@ -285,7 +285,28 @@ index b5fd76e..6122843 100644
      const val PREF_VIBRATE_IN_DND_MODE = false
      const val PREF_SOUND_ON = false
      const val PREF_SUGGEST_EMOJIS = true
-@@ -104,7 +105,7 @@ object Defaults {
+@@ -64,7 +65,7 @@ object Defaults {
+     @JvmField
+     var PREF_POPUP_ON = true
+     const val PREF_AUTO_CORRECTION = true
+-    const val PREF_MORE_AUTO_CORRECTION = false
++    const val PREF_MORE_AUTO_CORRECTION = true
+     const val PREF_AUTO_CORRECT_CONFIDENCE = 0.24f
+     const val PREF_AUTOCORRECT_SHORTCUTS = true
+     const val PREF_BACKSPACE_REVERTS_AUTOCORRECT = true
+@@ -76,9 +77,9 @@ object Defaults {
+     const val PREF_KEY_USE_PERSONALIZED_DICTS = true
+     const val PREF_KEY_USE_DOUBLE_SPACE_PERIOD = true
+     const val PREF_BLOCK_POTENTIALLY_OFFENSIVE = true
+-    const val PREF_SHOW_LANGUAGE_SWITCH_KEY = false
++    const val PREF_SHOW_LANGUAGE_SWITCH_KEY = true
+     const val PREF_LANGUAGE_SWITCH_KEY = "internal"
+-    const val PREF_SHOW_EMOJI_KEY = false
++    const val PREF_SHOW_EMOJI_KEY = true
+     const val PREF_SHOW_DPAD_KEY = true
+     const val PREF_VARIABLE_TOOLBAR_DIRECTION = true
+     const val PREF_ADDITIONAL_SUBTYPES = "de${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty${Separators.SETS}" +
+@@ -104,18 +105,18 @@ object Defaults {
      const val PREF_EMOJI_KEY_FIT = true
      const val PREF_EMOJI_SKIN_TONE = ""
      @JvmField
@@ -294,6 +315,28 @@ index b5fd76e..6122843 100644
      @JvmField
      val PREF_SPACE_VERTICAL_SWIPE = KeyboardActionListener.SwipeAction.NONE.name
      const val PREF_DELETE_SWIPE = true
+-    const val PREF_AUTOSPACE_AFTER_PUNCTUATION = false
++    const val PREF_AUTOSPACE_AFTER_PUNCTUATION = true
+     const val PREF_AUTOSPACE_AFTER_SUGGESTION = true
+     const val PREF_AUTOSPACE_AFTER_GESTURE_TYPING = true
+     const val PREF_AUTOSPACE_BEFORE_GESTURE_TYPING = true
+     const val PREF_SHIFT_REMOVES_AUTOSPACE = false
+     const val PREF_ALWAYS_INCOGNITO_MODE = false
+     const val PREF_BIGRAM_PREDICTIONS = true
+-    const val PREF_SUGGEST_PUNCTUATION = false
++    const val PREF_SUGGEST_PUNCTUATION = true
+     const val PREF_SUGGEST_CLIPBOARD_CONTENT = true
+     const val PREF_GESTURE_INPUT = true
+     const val PREF_VIBRATION_DURATION_SETTINGS = -1
+@@ -145,7 +146,7 @@ object Defaults {
+     @SuppressLint("RtlHardcoded")
+     const val PREF_ONE_HANDED_GRAVITY = Gravity.LEFT
+     const val PREF_ONE_HANDED_SCALE = 1f
+-    const val PREF_SHOW_NUMBER_ROW = false
++    const val PREF_SHOW_NUMBER_ROW = true
+     const val PREF_SHOW_NUMBER_ROW_IN_SYMBOLS = true
+     const val PREF_LOCALIZED_NUMBER_ROW = true
+     const val PREF_SHOW_NUMBER_ROW_HINTS = false
 diff --git a/app/src/main/java/helium314/keyboard/latin/settings/Settings.java b/app/src/main/java/helium314/keyboard/latin/settings/Settings.java
 index ea76f9d..43ee259 100644
 --- a/app/src/main/java/helium314/keyboard/latin/settings/Settings.java
