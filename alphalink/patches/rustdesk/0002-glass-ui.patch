@@ -1,0 +1,631 @@
+diff --git a/flutter/lib/common.dart b/flutter/lib/common.dart
+index 16846bd..b556ecc 100644
+--- a/flutter/lib/common.dart
++++ b/flutter/lib/common.dart
+@@ -46,6 +46,7 @@ import 'package:flutter_hbb/native/win32.dart'
+ import 'package:flutter_hbb/native/common.dart'
+     if (dart.library.html) 'package:flutter_hbb/web/common.dart';
+ import 'package:flutter_hbb/utils/http_service.dart' as http;
++import 'package:flutter_hbb/common/glass.dart';
+ 
+ final globalKey = GlobalKey<NavigatorState>();
+ final navigationBarKey = GlobalKey();
+@@ -1119,19 +1120,33 @@ class CustomAlertDialog extends StatelessWidget {
+         }
+         return KeyEventResult.ignored;
+       },
+-      child: AlertDialog(
+-          scrollable: true,
+-          title: title,
+-          content: ConstrainedBox(
+-            constraints: contentBoxConstraints,
+-            child: content,
+-          ),
+-          actions: actions,
+-          titlePadding: titlePadding ?? MyTheme.dialogTitlePadding(),
+-          contentPadding:
+-              MyTheme.dialogContentPadding(actions: actions is List),
+-          actionsPadding: MyTheme.dialogActionsPadding(),
+-          buttonPadding: MyTheme.dialogButtonPadding),
++      child: isGlassOn()
++          ? GlassDialog(
++              title: title,
++              titlePadding: titlePadding ?? MyTheme.dialogTitlePadding(),
++              content: ConstrainedBox(
++                constraints: contentBoxConstraints,
++                child: content,
++              ),
++              contentPadding:
++                  MyTheme.dialogContentPadding(actions: actions is List),
++              actions: actions,
++              actionsPadding: MyTheme.dialogActionsPadding(),
++              buttonSpacing: 8,
++            )
++          : AlertDialog(
++              scrollable: true,
++              title: title,
++              content: ConstrainedBox(
++                constraints: contentBoxConstraints,
++                child: content,
++              ),
++              actions: actions,
++              titlePadding: titlePadding ?? MyTheme.dialogTitlePadding(),
++              contentPadding:
++                  MyTheme.dialogContentPadding(actions: actions is List),
++              actionsPadding: MyTheme.dialogActionsPadding(),
++              buttonPadding: MyTheme.dialogButtonPadding),
+     );
+   }
+ }
+diff --git a/flutter/lib/common/glass.dart b/flutter/lib/common/glass.dart
+new file mode 100644
+index 0000000..67283a0
+--- /dev/null
++++ b/flutter/lib/common/glass.dart
+@@ -0,0 +1,368 @@
++import 'dart:ui';
++
++import 'package:flutter/material.dart';
++import 'package:flutter_hbb/models/platform_model.dart';
++import 'package:settings_ui/settings_ui.dart';
++
++/// "Glass" interface style (inspired by the translucent, blurred surfaces of
++/// recent iOS): a soft coloured background, frosted panels with a light rim,
++/// floating bars and glass dialogs.
++///
++/// Stored in the local option [kOptionGlassUi]; enabled unless set to `N`.
++const String kOptionGlassUi = 'glass-ui';
++
++bool? _glassOn;
++
++/// Whether the glass style is enabled (cached, see [setGlassOn]).
++bool isGlassOn() {
++  if (_glassOn != null) return _glassOn!;
++  try {
++    _glassOn = bind.mainGetLocalOption(key: kOptionGlassUi) != 'N';
++  } catch (_) {
++    _glassOn = true;
++  }
++  return _glassOn!;
++}
++
++Future<void> setGlassOn(bool on) async {
++  _glassOn = on;
++  try {
++    await bind.mainSetLocalOption(key: kOptionGlassUi, value: on ? 'Y' : 'N');
++  } catch (_) {}
++}
++
++/// Makes scaffolds / app bars / dialog surfaces transparent so that the
++/// glass background and the glass panels show through.
++ThemeData glassifyTheme(ThemeData t) {
++  if (!isGlassOn()) return t;
++  return t.copyWith(
++    scaffoldBackgroundColor: Colors.transparent,
++    appBarTheme: t.appBarTheme.copyWith(
++      backgroundColor: Colors.transparent,
++      elevation: 0,
++      scrolledUnderElevation: 0,
++      surfaceTintColor: Colors.transparent,
++      shadowColor: Colors.transparent,
++    ),
++    dialogTheme: t.dialogTheme.copyWith(
++      backgroundColor: Colors.transparent,
++      elevation: 0,
++    ),
++  );
++}
++
++/// Wraps the whole app (used from `MaterialApp.builder`).
++Widget glassWrap(BuildContext context, Widget? child) {
++  final c = child ?? const SizedBox.shrink();
++  if (!isGlassOn()) return c;
++  return GlassBackground(child: c);
++}
++
++SettingsThemeData glassSettingsTheme(bool dark) {
++  return SettingsThemeData(
++    settingsListBackground: Colors.transparent,
++    settingsSectionBackground:
++        dark ? const Color(0x1FFFFFFF) : const Color(0x99FFFFFF),
++    dividerColor: dark ? const Color(0x22FFFFFF) : const Color(0x22000000),
++  );
++}
++
++/// Soft gradient with a few blurred colour blobs; gives the glass something
++/// to refract.
++class GlassBackground extends StatelessWidget {
++  final Widget child;
++  const GlassBackground({Key? key, required this.child}) : super(key: key);
++
++  @override
++  Widget build(BuildContext context) {
++    final dark = Theme.of(context).brightness == Brightness.dark;
++    final accent = const Color(0xFF5CB888);
++    return Stack(
++      fit: StackFit.expand,
++      children: [
++        DecoratedBox(
++          decoration: BoxDecoration(
++            gradient: LinearGradient(
++              begin: Alignment.topLeft,
++              end: Alignment.bottomRight,
++              colors: dark
++                  ? const [Color(0xFF06140F), Color(0xFF0B1E1A), Color(0xFF0E1216)]
++                  : const [Color(0xFFE6F4EC), Color(0xFFDDEEF0), Color(0xFFF1F3F8)],
++            ),
++          ),
++        ),
++        _Blob(
++            alignment: const Alignment(-1.0, -0.8),
++            size: 460,
++            color: accent.withOpacity(dark ? 0.38 : 0.34)),
++        _Blob(
++            alignment: const Alignment(1.1, -0.15),
++            size: 420,
++            color: const Color(0xFF2EC4B6).withOpacity(dark ? 0.26 : 0.26)),
++        _Blob(
++            alignment: const Alignment(-0.35, 1.05),
++            size: 520,
++            color: const Color(0xFF3A86FF).withOpacity(dark ? 0.22 : 0.20)),
++        child,
++      ],
++    );
++  }
++}
++
++class _Blob extends StatelessWidget {
++  final Alignment alignment;
++  final double size;
++  final Color color;
++  const _Blob(
++      {required this.alignment, required this.size, required this.color});
++
++  @override
++  Widget build(BuildContext context) {
++    return Align(
++      alignment: alignment,
++      child: IgnorePointer(
++        child: Container(
++          width: size,
++          height: size,
++          decoration: BoxDecoration(
++            shape: BoxShape.circle,
++            gradient: RadialGradient(colors: [color, color.withOpacity(0)]),
++          ),
++        ),
++      ),
++    );
++  }
++}
++
++/// A frosted-glass panel: backdrop blur, translucent tint, light rim and a
++/// soft shadow.
++class Glass extends StatelessWidget {
++  final Widget child;
++  final double radius;
++  final double blur;
++  final EdgeInsetsGeometry? margin;
++  final EdgeInsetsGeometry? padding;
++  final bool shadow;
++
++  const Glass({
++    Key? key,
++    required this.child,
++    this.radius = 20,
++    this.blur = 20,
++    this.margin,
++    this.padding,
++    this.shadow = true,
++  }) : super(key: key);
++
++  @override
++  Widget build(BuildContext context) {
++    final dark = Theme.of(context).brightness == Brightness.dark;
++    final r = BorderRadius.circular(radius);
++    Widget panel = ClipRRect(
++      borderRadius: r,
++      child: BackdropFilter(
++        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
++        child: DecoratedBox(
++          decoration: BoxDecoration(
++            borderRadius: r,
++            gradient: LinearGradient(
++              begin: Alignment.topLeft,
++              end: Alignment.bottomRight,
++              colors: dark
++                  ? const [Color(0x2EFFFFFF), Color(0x0DFFFFFF)]
++                  : const [Color(0xB3FFFFFF), Color(0x66FFFFFF)],
++            ),
++            border: Border.all(
++              color: dark ? const Color(0x38FFFFFF) : const Color(0xB3FFFFFF),
++              width: 1,
++            ),
++          ),
++          child: Stack(
++            children: [
++              Padding(padding: padding ?? EdgeInsets.zero, child: child),
++              // specular highlight along the top edge
++              Positioned(
++                top: 0,
++                left: radius,
++                right: radius,
++                height: 1,
++                child: IgnorePointer(
++                  child: DecoratedBox(
++                    decoration: BoxDecoration(
++                      gradient: LinearGradient(colors: [
++                        Colors.white.withOpacity(0),
++                        Colors.white.withOpacity(dark ? 0.55 : 0.95),
++                        Colors.white.withOpacity(0),
++                      ]),
++                    ),
++                  ),
++                ),
++              ),
++            ],
++          ),
++        ),
++      ),
++    );
++    if (shadow) {
++      // The shadow is clipped to the outside of the panel: otherwise it would
++      // show through the translucent glass as a dark band.
++      panel = Stack(
++        clipBehavior: Clip.none,
++        children: [
++          Positioned.fill(
++            child: IgnorePointer(
++              child: ClipPath(
++                clipper: _OutsideRRect(radius),
++                child: DecoratedBox(
++                  decoration: BoxDecoration(
++                    borderRadius: r,
++                    boxShadow: [
++                      BoxShadow(
++                        color: Colors.black.withOpacity(dark ? 0.40 : 0.14),
++                        blurRadius: 28,
++                        offset: const Offset(0, 10),
++                      ),
++                    ],
++                  ),
++                ),
++              ),
++            ),
++          ),
++          panel,
++        ],
++      );
++    }
++    if (margin != null) panel = Padding(padding: margin!, child: panel);
++    return panel;
++  }
++}
++
++class _OutsideRRect extends CustomClipper<Path> {
++  final double radius;
++  const _OutsideRRect(this.radius);
++
++  @override
++  Path getClip(Size size) {
++    return Path.combine(
++      PathOperation.difference,
++      Path()
++        ..addRect(Rect.fromLTWH(-120, -120, size.width + 240, size.height + 240)),
++      Path()
++        ..addRRect(RRect.fromRectAndRadius(
++            Offset.zero & size, Radius.circular(radius))),
++    );
++  }
++
++  @override
++  bool shouldReclip(covariant _OutsideRRect old) => old.radius != radius;
++}
++
++/// A list card: glass when the style is on, a regular [Card] otherwise.
++Widget glassCard(BuildContext context,
++    {required Widget child, EdgeInsets? margin}) {
++  if (!isGlassOn()) {
++    return Card(margin: margin, child: child);
++  }
++  return Glass(
++    radius: 18,
++    blur: 16,
++    margin: (margin ?? EdgeInsets.zero).add(const EdgeInsets.symmetric(vertical: 4)),
++    shadow: false,
++    child: child,
++  );
++}
++
++/// Floating glass capsule around the bottom navigation bar.
++Widget glassBottomBar(BuildContext context, Widget bar) {
++  if (!isGlassOn()) return bar;
++  return SafeArea(
++    top: false,
++    minimum: const EdgeInsets.only(bottom: 8),
++    child: Padding(
++      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
++      child: Glass(
++        radius: 30,
++        blur: 28,
++        child: MediaQuery.removePadding(
++          context: context,
++          removeBottom: true,
++          child: bar,
++        ),
++      ),
++    ),
++  );
++}
++
++/// The body of [CustomAlertDialog] in glass mode.
++class GlassDialog extends StatelessWidget {
++  final Widget? title;
++  final EdgeInsetsGeometry titlePadding;
++  final Widget content;
++  final EdgeInsetsGeometry contentPadding;
++  final List<Widget>? actions;
++  final EdgeInsetsGeometry actionsPadding;
++  final double buttonSpacing;
++
++  const GlassDialog({
++    Key? key,
++    this.title,
++    required this.titlePadding,
++    required this.content,
++    required this.contentPadding,
++    this.actions,
++    required this.actionsPadding,
++    required this.buttonSpacing,
++  }) : super(key: key);
++
++  @override
++  Widget build(BuildContext context) {
++    final theme = Theme.of(context);
++    return Dialog(
++      backgroundColor: Colors.transparent,
++      elevation: 0,
++      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
++      child: Glass(
++        radius: 28,
++        blur: 30,
++        child: ConstrainedBox(
++          constraints: const BoxConstraints(minWidth: 280),
++          child: IntrinsicWidth(
++            child: SingleChildScrollView(
++              child: Column(
++                mainAxisSize: MainAxisSize.min,
++                crossAxisAlignment: CrossAxisAlignment.stretch,
++                children: [
++                  if (title != null)
++                    Padding(
++                      padding: titlePadding,
++                      child: DefaultTextStyle(
++                        style: theme.textTheme.titleLarge ?? const TextStyle(),
++                        child: title!,
++                      ),
++                    ),
++                  Padding(
++                    padding: contentPadding,
++                    child: DefaultTextStyle(
++                      style: theme.textTheme.titleMedium ?? const TextStyle(),
++                      child: content,
++                    ),
++                  ),
++                  if (actions != null && actions!.isNotEmpty)
++                    Padding(
++                      padding: actionsPadding,
++                      child: OverflowBar(
++                        alignment: MainAxisAlignment.end,
++                        spacing: buttonSpacing,
++                        overflowSpacing: buttonSpacing,
++                        children: actions!,
++                      ),
++                    ),
++                ],
++              ),
++            ),
++          ),
++        ),
++      ),
++    );
++  }
++}
+diff --git a/flutter/lib/common/widgets/peer_card.dart b/flutter/lib/common/widgets/peer_card.dart
+index 1f9f3ed..fa4c914 100644
+--- a/flutter/lib/common/widgets/peer_card.dart
++++ b/flutter/lib/common/widgets/peer_card.dart
+@@ -15,6 +15,7 @@ import '../../models/platform_model.dart';
+ import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
+ import '../../desktop/widgets/popup_menu.dart';
+ import 'dart:math' as math;
++import 'package:flutter_hbb/common/glass.dart';
+ 
+ typedef PopupMenuEntryBuilder = Future<List<mod_menu.PopupMenuEntry<String>>>
+     Function(BuildContext);
+@@ -82,7 +83,7 @@ class _PeerCardState extends State<_PeerCard>
+ 
+   Widget _buildPortrait() {
+     final peer = super.widget.peer;
+-    return Card(
++    return glassCard(context,
+         margin: EdgeInsets.symmetric(horizontal: 2),
+         child: gestureDetector(
+           child: Container(
+diff --git a/flutter/lib/desktop/pages/desktop_setting_page.dart b/flutter/lib/desktop/pages/desktop_setting_page.dart
+index 82f038c..f5216da 100644
+--- a/flutter/lib/desktop/pages/desktop_setting_page.dart
++++ b/flutter/lib/desktop/pages/desktop_setting_page.dart
+@@ -24,6 +24,8 @@ import 'package:url_launcher/url_launcher_string.dart';
+ 
+ import '../../common/widgets/dialog.dart';
+ import '../../common/widgets/login.dart';
++import 'package:flutter_hbb/common/glass.dart';
++import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
+ 
+ const double _kTabWidth = 200;
+ const double _kTabHeight = 42;
+@@ -448,6 +450,18 @@ class _GeneralState extends State<_General> {
+           groupValue: current,
+           label: 'Follow System',
+           onChanged: isOptFixed ? null : onChanged),
++      CheckboxListTile(
++        contentPadding: EdgeInsets.zero,
++        dense: true,
++        controlAffinity: ListTileControlAffinity.leading,
++        title: Text(translate('Glass interface')),
++        value: isGlassOn(),
++        onChanged: (v) async {
++          await setGlassOn(v ?? true);
++          RefreshWrapper.of(context)?.rebuild();
++          setState(() {});
++        },
++      ),
+     ]);
+   }
+ 
+diff --git a/flutter/lib/main.dart b/flutter/lib/main.dart
+index 5f234cb..9dc4504 100644
+--- a/flutter/lib/main.dart
++++ b/flutter/lib/main.dart
+@@ -29,6 +29,7 @@ import 'mobile/pages/home_page.dart';
+ import 'mobile/pages/server_page.dart';
+ import 'mobile/widgets/deploy_dialog.dart';
+ import 'models/platform_model.dart';
++import 'package:flutter_hbb/common/glass.dart';
+ 
+ /// Basic window and launch properties.
+ int? kWindowId;
+@@ -361,8 +362,8 @@ void _runApp(
+       navigatorKey: globalKey,
+       debugShowCheckedModeBanner: false,
+       title: title,
+-      theme: MyTheme.lightTheme,
+-      darkTheme: MyTheme.darkTheme,
++      theme: glassifyTheme(MyTheme.lightTheme),
++      darkTheme: glassifyTheme(MyTheme.darkTheme),
+       themeMode: themeMode,
+       home: home,
+       localizationsDelegates: const [
+@@ -378,7 +379,7 @@ void _runApp(
+       builder: (context, child) {
+         child = _keepScaleBuilder(context, child);
+         child = botToastBuilder(context, child);
+-        return child;
++        return glassWrap(context, child);
+       },
+     ),
+   ));
+@@ -498,8 +499,8 @@ class _AppState extends State<App> with WidgetsBindingObserver {
+           title: isWeb
+               ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
+               : bind.mainGetAppNameSync(),
+-          theme: MyTheme.lightTheme,
+-          darkTheme: MyTheme.darkTheme,
++          theme: glassifyTheme(MyTheme.lightTheme),
++          darkTheme: glassifyTheme(MyTheme.darkTheme),
+           themeMode: MyTheme.currentThemeMode(),
+           home: isDesktop
+               ? const DesktopTabPage()
+@@ -522,12 +523,13 @@ class _AppState extends State<App> with WidgetsBindingObserver {
+                       data: MediaQuery.of(context).copyWith(
+                         textScaler: TextScaler.linear(1.0),
+                       ),
+-                      child: child ?? Container(),
++                      child: glassWrap(context, child),
+                     ),
+                   )
+               : (context, child) {
+                   child = _keepScaleBuilder(context, child);
+                   child = botToastBuilder(context, child);
++                  child = glassWrap(context, child);
+                   if ((isDesktop && desktopType == DesktopType.main) ||
+                       isWebDesktop) {
+                     child = keyListenerBuilder(context, child);
+diff --git a/flutter/lib/mobile/pages/home_page.dart b/flutter/lib/mobile/pages/home_page.dart
+index 651ec4f..ad9e8e3 100644
+--- a/flutter/lib/mobile/pages/home_page.dart
++++ b/flutter/lib/mobile/pages/home_page.dart
+@@ -8,6 +8,7 @@ import '../../common/widgets/chat_page.dart';
+ import '../../models/platform_model.dart';
+ import '../../models/state_model.dart';
+ import 'connection_page.dart';
++import 'package:flutter_hbb/common/glass.dart';
+ 
+ abstract class PageShape extends Widget {
+   final String title = "";
+@@ -79,8 +80,13 @@ class HomePageState extends State<HomePage> {
+             title: appTitle(),
+             actions: _pages.elementAt(_selectedIndex).appBarActions,
+           ),
+-          bottomNavigationBar: BottomNavigationBar(
++          extendBody: isGlassOn(),
++          bottomNavigationBar: glassBottomBar(
++              context,
++              BottomNavigationBar(
+             key: navigationBarKey,
++            backgroundColor: isGlassOn() ? Colors.transparent : null,
++            elevation: isGlassOn() ? 0 : null,
+             items: _pages
+                 .map((page) =>
+                     BottomNavigationBarItem(icon: page.icon, label: page.title))
+@@ -101,7 +107,7 @@ class HomePageState extends State<HomePage> {
+                 }
+               }
+             }),
+-          ),
++          )),
+           body: _pages.elementAt(_selectedIndex),
+         ));
+   }
+diff --git a/flutter/lib/mobile/pages/settings_page.dart b/flutter/lib/mobile/pages/settings_page.dart
+index 198613a..26cce80 100644
+--- a/flutter/lib/mobile/pages/settings_page.dart
++++ b/flutter/lib/mobile/pages/settings_page.dart
+@@ -21,6 +21,8 @@ import '../widgets/deploy_dialog.dart';
+ import '../widgets/dialog.dart';
+ import 'home_page.dart';
+ import 'scan_page.dart';
++import 'package:flutter_hbb/common/glass.dart';
++import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
+ 
+ class SettingsPage extends StatefulWidget implements PageShape {
+   @override
+@@ -716,6 +718,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
+     final hideSecuritySettings =
+         bind.mainGetBuildinOption(key: kOptionHideSecuritySetting) == 'Y';
+     final settings = SettingsList(
++      lightTheme: isGlassOn() ? glassSettingsTheme(false) : null,
++      darkTheme: isGlassOn() ? glassSettingsTheme(true) : null,
+       sections: [
+         customClientSection,
+         if (!bind.isDisableAccount())
+@@ -748,6 +752,16 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
+             ],
+           ),
+         SettingsSection(title: Text(translate("Settings")), tiles: [
++          SettingsTile.switchTile(
++            title: Text(translate('Glass interface')),
++            leading: Icon(Icons.blur_on),
++            initialValue: isGlassOn(),
++            onToggle: (v) async {
++              await setGlassOn(v);
++              RefreshWrapper.of(context)?.rebuild();
++              setState(() {});
++            },
++          ),
+           if (!disabledSettings && !_hideNetwork && !_hideServer)
+             SettingsTile(
+                 title: Text(translate('ID/Relay Server')),
+diff --git a/src/lang/ru.rs b/src/lang/ru.rs
+index 958c61e..8304497 100644
+--- a/src/lang/ru.rs
++++ b/src/lang/ru.rs
+@@ -335,6 +335,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("Scale adaptive", "Адаптивный масштаб"),
+         ("General", "Общие"),
+         ("Security", "Безопасность"),
++        ("Glass interface", "Стеклянный интерфейс"),
+         ("Theme", "Тема"),
+         ("Dark Theme", "Тёмная тема"),
+         ("Light Theme", "Светлая тема"),

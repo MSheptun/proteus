@@ -1,0 +1,177 @@
+diff --git a/flutter/lib/common/glass.dart b/flutter/lib/common/glass.dart
+index 67283a0..b8da6f3 100644
+--- a/flutter/lib/common/glass.dart
++++ b/flutter/lib/common/glass.dart
+@@ -366,3 +366,62 @@ class GlassDialog extends StatelessWidget {
+     );
+   }
+ }
++
++/// A translucent surface colour for small controls (tab chips, buttons);
++/// falls back to the theme's background when the glass style is off.
++Color glassSurfaceColor(BuildContext context) {
++  if (!isGlassOn()) return Theme.of(context).colorScheme.background;
++  final dark = Theme.of(context).brightness == Brightness.dark;
++  return dark ? const Color(0x1FFFFFFF) : const Color(0x80FFFFFF);
++}
++
++/// Transparent in glass mode (the glass background shows through), the
++/// theme's background otherwise.
++Color glassBaseColor(BuildContext context) {
++  return isGlassOn()
++      ? Colors.transparent
++      : Theme.of(context).colorScheme.background;
++}
++
++/// A full-height frosted side panel (desktop sidebar).
++class GlassPane extends StatelessWidget {
++  final double? width;
++  final Widget child;
++  final Color? fallbackColor;
++  const GlassPane({Key? key, this.width, required this.child, this.fallbackColor})
++      : super(key: key);
++
++  @override
++  Widget build(BuildContext context) {
++    if (!isGlassOn()) {
++      return Container(width: width, color: fallbackColor, child: child);
++    }
++    final dark = Theme.of(context).brightness == Brightness.dark;
++    return SizedBox(
++      width: width,
++      child: ClipRect(
++        child: BackdropFilter(
++          filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
++          child: DecoratedBox(
++            decoration: BoxDecoration(
++              gradient: LinearGradient(
++                begin: Alignment.topCenter,
++                end: Alignment.bottomCenter,
++                colors: dark
++                    ? const [Color(0x26FFFFFF), Color(0x0FFFFFFF)]
++                    : const [Color(0x99FFFFFF), Color(0x59FFFFFF)],
++              ),
++              border: Border(
++                right: BorderSide(
++                  color: dark ? const Color(0x2EFFFFFF) : const Color(0x80FFFFFF),
++                  width: 1,
++                ),
++              ),
++            ),
++            child: child,
++          ),
++        ),
++      ),
++    );
++  }
++}
+diff --git a/flutter/lib/common/widgets/peer_tab_page.dart b/flutter/lib/common/widgets/peer_tab_page.dart
+index 4849f27..9e32204 100644
+--- a/flutter/lib/common/widgets/peer_tab_page.dart
++++ b/flutter/lib/common/widgets/peer_tab_page.dart
+@@ -24,6 +24,7 @@ import 'package:pull_down_button/pull_down_button.dart';
+ 
+ import '../../common.dart';
+ import '../../models/platform_model.dart';
++import 'package:flutter_hbb/common/glass.dart';
+ 
+ class PeerTabPage extends StatefulWidget {
+   const PeerTabPage({Key? key}) : super(key: key);
+@@ -150,7 +151,7 @@ class _PeerTabPageState extends State<PeerTabPage>
+             ?..withOpacity(0.5);
+           final hover = false.obs;
+           final deco = BoxDecoration(
+-              color: Theme.of(context).colorScheme.background,
++              color: glassSurfaceColor(context),
+               borderRadius: BorderRadius.circular(6));
+           final decoBorder = BoxDecoration(
+               border: Border(
+@@ -697,7 +698,7 @@ class _PeerSearchBarState extends State<PeerSearchBar> {
+     return Obx(() => Container(
+           width: stateGlobal.isPortrait.isTrue ? 120 : 140,
+           decoration: BoxDecoration(
+-            color: Theme.of(context).colorScheme.background,
++            color: glassSurfaceColor(context),
+             borderRadius: BorderRadius.circular(6),
+           ),
+           child: Row(
+@@ -966,7 +967,7 @@ class RefreshWidgetState extends State<RefreshWidget> {
+   @override
+   Widget build(BuildContext context) {
+     final deco = BoxDecoration(
+-      color: Theme.of(context).colorScheme.background,
++      color: glassSurfaceColor(context),
+       borderRadius: BorderRadius.circular(6),
+     );
+     return AnimatedRotation(
+@@ -1008,7 +1009,7 @@ Widget _hoverAction(
+     EdgeInsetsGeometry padding = const EdgeInsets.all(4.0)}) {
+   final hover = false.obs;
+   final deco = BoxDecoration(
+-    color: Theme.of(context).colorScheme.background,
++    color: glassSurfaceColor(context),
+     borderRadius: BorderRadius.circular(6),
+   );
+   return Tooltip(
+diff --git a/flutter/lib/desktop/pages/desktop_home_page.dart b/flutter/lib/desktop/pages/desktop_home_page.dart
+index 6d370cb..4448281 100644
+--- a/flutter/lib/desktop/pages/desktop_home_page.dart
++++ b/flutter/lib/desktop/pages/desktop_home_page.dart
+@@ -24,6 +24,7 @@ import 'package:url_launcher/url_launcher.dart';
+ import 'package:window_manager/window_manager.dart';
+ import 'package:window_size/window_size.dart' as window_size;
+ import '../widgets/button.dart';
++import 'package:flutter_hbb/common/glass.dart';
+ 
+ class DesktopHomePage extends StatefulWidget {
+   const DesktopHomePage({Key? key}) : super(key: key);
+@@ -128,9 +129,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
+     final textColor = Theme.of(context).textTheme.titleLarge?.color;
+     return ChangeNotifierProvider.value(
+       value: gFFI.serverModel,
+-      child: Container(
++      child: GlassPane(
+         width: isIncomingOnly ? 280.0 : 200.0,
+-        color: Theme.of(context).colorScheme.background,
++        fallbackColor: Theme.of(context).colorScheme.background,
+         child: Stack(
+           children: [
+             Column(
+diff --git a/flutter/lib/desktop/pages/desktop_setting_page.dart b/flutter/lib/desktop/pages/desktop_setting_page.dart
+index f5216da..a320d79 100644
+--- a/flutter/lib/desktop/pages/desktop_setting_page.dart
++++ b/flutter/lib/desktop/pages/desktop_setting_page.dart
+@@ -276,10 +276,10 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
+   Widget build(BuildContext context) {
+     super.build(context);
+     return Scaffold(
+-      backgroundColor: Theme.of(context).colorScheme.background,
++      backgroundColor: glassBaseColor(context),
+       body: _buildBlock(
+         children: <Widget>[
+-          SizedBox(
++          GlassPane(
+             width: _kTabWidth,
+             child: Column(
+               children: [
+diff --git a/flutter/lib/desktop/pages/desktop_tab_page.dart b/flutter/lib/desktop/pages/desktop_tab_page.dart
+index 6440e55..4a3482c 100644
+--- a/flutter/lib/desktop/pages/desktop_tab_page.dart
++++ b/flutter/lib/desktop/pages/desktop_tab_page.dart
+@@ -11,6 +11,7 @@ import 'package:window_manager/window_manager.dart';
+ // import 'package:flutter/services.dart';
+ 
+ import '../../common/shared_state.dart';
++import 'package:flutter_hbb/common/glass.dart';
+ 
+ class DesktopTabPage extends StatefulWidget {
+   const DesktopTabPage({Key? key}) : super(key: key);
+@@ -93,7 +94,7 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
+   Widget build(BuildContext context) {
+     final tabWidget = Container(
+         child: Scaffold(
+-            backgroundColor: Theme.of(context).colorScheme.background,
++            backgroundColor: glassBaseColor(context),
+             body: DesktopTab(
+               controller: tabController,
+               tail: Offstage(
